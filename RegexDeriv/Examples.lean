@@ -50,4 +50,36 @@ def r2 : Regex := star (choice a (choice b (seq a b)))
 #guard matchDeriv "abba".toList r2
 #guard !matchDeriv "abc".toList r2
 
+/-! ## Parse-Bäume und `flatten`
+
+Zu einem Wort kann es mehrere Parse-Bäume geben. `flatten` liefert für alle
+dasselbe Wort; der Parser soll später den POSIX-Baum auswählen. -/
+
+open Val
+
+-- r1 = (a + ab)(b + ε) mit dem Wort "ab": zwei verschiedene Bäume
+
+-- POSIX-Baum aus dem Paper: (Right (a, b), Right ())
+def v1 : Val := pair (right (pair (letter 'a') (letter 'b'))) (right empty)
+-- anderer Baum: (Left a, Left b)
+def v1' : Val := pair (left (letter 'a')) (left (letter 'b'))
+
+#eval flatten v1
+#guard flatten v1 = "ab".toList
+#guard flatten v1' = "ab".toList
+#guard v1 != v1'
+
+-- r2 = (a + (b + ab))* mit dem Wort "ab": eine oder zwei Wiederholungen
+
+-- POSIX-Baum aus dem Paper: [Right (Right (a, b))]
+def v2 : Val := list [right (right (pair (letter 'a') (letter 'b')))]
+-- anderer Baum: [Left a, Right (Left b)]
+def v2' : Val := list [left (letter 'a'), right (left (letter 'b'))]
+
+#guard flatten v2 = "ab".toList
+#guard flatten v2' = "ab".toList
+
+-- null Wiederholungen ergeben das leere Wort
+#guard flatten (list []) = []
+
 end Examples
