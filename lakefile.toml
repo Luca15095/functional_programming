@@ -1,0 +1,10 @@
+name = "regex_deriv"
+version = "0.1.0"
+defaultTargets = ["regex_deriv"]
+
+[[lean_lib]]
+name = "RegexDeriv"
+
+[[lean_exe]]
+name = "regex_deriv"
+root = "Main"
