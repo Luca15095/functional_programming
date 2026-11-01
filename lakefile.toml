@@ -1,10 +1,13 @@
 name = "regex_deriv"
 version = "0.1.0"
-defaultTargets = ["regex_deriv"]
+defaultTargets = ["RegexDeriv"]
+
+# Property-based Testing (wird nur in RegexDeriv/Testing.lean benutzt).
+# Der Tag muss zur Lean-Version in `lean-toolchain` passen.
+[[require]]
+name = "plausible"
+git = "https://github.com/leanprover-community/plausible"
+rev = "v4.35.0"
 
 [[lean_lib]]
 name = "RegexDeriv"
-
-[[lean_exe]]
-name = "regex_deriv"
-root = "Main"
