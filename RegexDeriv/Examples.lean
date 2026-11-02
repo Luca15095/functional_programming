@@ -82,4 +82,33 @@ def v2' : Val := list [left (letter 'a'), right (left (letter 'b'))]
 -- null Wiederholungen ergeben das leere Wort
 #guard flatten (list []) = []
 
+/-! ## Parser
+
+`parse` muss aus allen möglichen Bäumen den POSIX-Baum auswählen. -/
+
+-- Die beiden Beispiele aus dem Paper
+#eval parse r1 "ab".toList
+#guard parse r1 "ab".toList == some v1
+#guard parse r2 "ab".toList == some v2
+
+-- weitere Wörter für r1 = (a + ab)(b + ε)
+#guard parse r1 "a".toList   == some (pair (left (letter 'a')) (right empty))
+#guard parse r1 "abb".toList ==
+  some (pair (right (pair (letter 'a') (letter 'b'))) (left (letter 'b')))
+#guard parse r1 "b".toList   == none
+
+-- r2 = (a + (b + ab))* mit "abba": erst "ab", dann "b", dann "a"
+#guard parse r2 "abba".toList ==
+  some (list [right (right (pair (letter 'a') (letter 'b'))),
+              right (left (letter 'b')),
+              left (letter 'a')])
+
+-- x* mit "" und "xx"
+#guard parse (star x) [] == some (list [])
+#guard parse (star x) "xx".toList == some (list [letter 'x', letter 'x'])
+
+-- mkEps wählt bei einer Auswahl die linke Seite, wenn sie nullable ist
+#guard mkEps (choice (star a) eps) == some (left (list []))
+#guard mkEps (choice a eps)        == some (right empty)
+
 end Examples
