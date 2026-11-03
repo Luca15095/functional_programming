@@ -1,4 +1,5 @@
 import RegexDeriv.Parse
+import RegexDeriv.Language
 
 /-!
 # Beispiele
@@ -110,5 +111,50 @@ def v2' : Val := list [left (letter 'a'), right (left (letter 'b'))]
 -- mkEps wählt bei einer Auswahl die linke Seite, wenn sie nullable ist
 #guard mkEps (choice (star a) eps) == some (left (list []))
 #guard mkEps (choice a eps)        == some (right empty)
+
+/-! ## Sprache `InLang` und gültige Bäume `Valid`
+
+`InLang` und `Valid` sind Aussagen (`Prop`), keine Funktionen. Man kann sie nicht
+mit `#eval` ausrechnen, sondern muss sie beweisen. `example` ist ein Satz ohne
+Namen: Wenn die Datei baut, hat Lean den Beweis akzeptiert. -/
+
+-- "ab" ∈ L(r1), mit Taktiken bewiesen: "ab" = "a" ++ "b",
+-- "a" kommt aus der linken Seite von (a + ab), "b" aus der linken Seite von (b + ε)
+example : InLang ['a', 'b'] r1 := by
+  apply InLang.seq (w₁ := ['a']) (w₂ := ['b'])
+  · apply InLang.choiceLeft
+    exact InLang.char 'a'
+  · apply InLang.choiceLeft
+    exact InLang.char 'b'
+
+-- "xx" ∈ L(x*): zwei Wiederholungen, dann Schluss
+example : InLang ['x', 'x'] (star x) := by
+  apply InLang.starCons (w₁ := ['x']) (w₂ := ['x'])
+  · exact InLang.char 'x'
+  · apply InLang.starCons (w₁ := ['x']) (w₂ := [])
+    · exact InLang.char 'x'
+    · exact InLang.starNil
+
+-- Kein Wort liegt in L(φ): es gibt keine Regel, die auf φ endet
+example (w : List Char) : ¬ InLang w phi := by
+  intro h
+  cases h
+
+-- Beide Bäume für "ab" aus dem Abschnitt oben sind gültig für r1,
+-- direkt als Term aufgeschrieben: die Konstruktoren bilden den Baum nach
+example : Valid v1 r1 :=
+  Valid.seq (Valid.right (Valid.seq (Valid.char 'a') (Valid.char 'b'))) (Valid.right Valid.eps)
+
+example : Valid v1' r1 :=
+  Valid.seq (Valid.left (Valid.char 'a')) (Valid.left (Valid.char 'b'))
+
+example : Valid v2 r2 :=
+  Valid.starCons (Valid.right (Valid.right (Valid.seq (Valid.char 'a') (Valid.char 'b'))))
+    Valid.starNil
+
+-- Ein Baum für den falschen Buchstaben ist nicht gültig
+example : ¬ Valid (letter 'a') b := by
+  intro h
+  cases h
 
 end Examples
