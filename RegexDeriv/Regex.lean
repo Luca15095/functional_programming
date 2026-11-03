@@ -1,24 +1,21 @@
 /-!
 # Reguläre Ausdrücke und Ableitungen
 
-Regex-AST, `nullable`, `deriv` (Ableitung `r\l`) und `matchDeriv`.
-Übersetzt aus der Haskell-Referenz (Abschnitt *Derivative-based matcher*).
+`Regex`, `nullable`, `deriv` und `matchDeriv` aus der Haskell-Referenz
+(Abschnitt *Derivative-based matcher*).
 -/
 
-/-- Reguläre Ausdrücke. Entspricht `data R` im Haskell-Code:
-`Phi`, `Eps`, `L Char`, `Seq R R`, `Choice R R`, `Star R`. -/
 inductive Regex where
-  | phi                          -- leere Sprache ∅
-  | eps                          -- leeres Wort ε
-  | char (c : Char)              -- einzelner Buchstabe
-  | seq (r s : Regex)            -- Verkettung r · s
-  | choice (r s : Regex)         -- Auswahl r + s
-  | star (r : Regex)             -- Kleene-Stern r*
+  | phi
+  | eps
+  | char (c : Char)
+  | seq (r s : Regex)
+  | choice (r s : Regex)
+  | star (r : Regex)
   deriving Repr, DecidableEq
 
 namespace Regex
 
-/-- `nullable r = true` genau dann, wenn das leere Wort in `L(r)` liegt. -/
 def nullable : Regex → Bool
   | phi        => false
   | eps        => true
@@ -27,8 +24,7 @@ def nullable : Regex → Bool
   | seq r s    => nullable r && nullable s
   | star _     => true
 
-/-- Ableitung `r\c`: beschreibt alle Wörter `w`, für die `c :: w` in `L(r)` liegt.
-Wie im Haskell-Code kommt der Buchstabe zuerst. -/
+/-- Ableitung `r\c`. -/
 def deriv (c : Char) : Regex → Regex
   | phi        => phi
   | eps        => phi
@@ -39,9 +35,6 @@ def deriv (c : Char) : Regex → Regex
       else seq (deriv c r) s
   | star r     => seq (deriv c r) (star r)
 
-/-- Matcher: leitet nacheinander nach jedem Buchstaben ab und prüft am Ende `nullable`.
-Im Haskell-Code passiert das in der Hilfsfunktion `go`; hier rekursiert
-`matchDeriv` direkt über das Wort. -/
 def matchDeriv : List Char → Regex → Bool
   | [],      r => nullable r
   | c :: cs, r => matchDeriv cs (deriv c r)

@@ -4,17 +4,13 @@ import RegexDeriv.Language
 /-!
 # Beispiele
 
-`#eval`-Beispiele aus dem Paper.
-
-`#eval` zeigt ein Ergebnis nur an. `#guard` prüft, dass ein Ausdruck `true` ist,
-und lässt sonst `lake build` fehlschlagen.
+Beispiele aus dem Paper. Jedes `#guard` wird bei `lake build` geprüft.
 -/
 
 open Regex
 
 namespace Examples
 
--- Abkürzungen für die Buchstaben in den Beispielen
 def a : Regex := char 'a'
 def b : Regex := char 'b'
 def x : Regex := char 'x'
@@ -51,14 +47,9 @@ def r2 : Regex := star (choice a (choice b (seq a b)))
 #guard matchDeriv "abba".toList r2
 #guard !matchDeriv "abc".toList r2
 
-/-! ## Parse-Bäume und `flatten`
-
-Zu einem Wort kann es mehrere Parse-Bäume geben. `flatten` liefert für alle
-dasselbe Wort; der Parser soll später den POSIX-Baum auswählen. -/
+/-! ## Parse-Bäume und `flatten` -/
 
 open Val
-
--- r1 = (a + ab)(b + ε) mit dem Wort "ab": zwei verschiedene Bäume
 
 -- POSIX-Baum aus dem Paper: (Right (a, b), Right ())
 def v1 : Val := pair (right (pair (letter 'a') (letter 'b'))) (right empty)
@@ -70,8 +61,6 @@ def v1' : Val := pair (left (letter 'a')) (left (letter 'b'))
 #guard flatten v1' = "ab".toList
 #guard v1 != v1'
 
--- r2 = (a + (b + ab))* mit dem Wort "ab": eine oder zwei Wiederholungen
-
 -- POSIX-Baum aus dem Paper: [Right (Right (a, b))]
 def v2 : Val := list [right (right (pair (letter 'a') (letter 'b')))]
 -- anderer Baum: [Left a, Right (Left b)]
@@ -80,12 +69,9 @@ def v2' : Val := list [left (letter 'a'), right (left (letter 'b'))]
 #guard flatten v2 = "ab".toList
 #guard flatten v2' = "ab".toList
 
--- null Wiederholungen ergeben das leere Wort
 #guard flatten (list []) = []
 
-/-! ## Parser
-
-`parse` muss aus allen möglichen Bäumen den POSIX-Baum auswählen. -/
+/-! ## Parser -/
 
 -- Die beiden Beispiele aus dem Paper
 #eval parse r1 "ab".toList
@@ -112,14 +98,9 @@ def v2' : Val := list [left (letter 'a'), right (left (letter 'b'))]
 #guard mkEps (choice (star a) eps) == some (left (list []))
 #guard mkEps (choice a eps)        == some (right empty)
 
-/-! ## Sprache `InLang` und gültige Bäume `Valid`
+/-! ## `InLang` und `Valid` -/
 
-`InLang` und `Valid` sind Aussagen (`Prop`), keine Funktionen. Man kann sie nicht
-mit `#eval` ausrechnen, sondern muss sie beweisen. `example` ist ein Satz ohne
-Namen: Wenn die Datei baut, hat Lean den Beweis akzeptiert. -/
-
--- "ab" ∈ L(r1), mit Taktiken bewiesen: "ab" = "a" ++ "b",
--- "a" kommt aus der linken Seite von (a + ab), "b" aus der linken Seite von (b + ε)
+-- "ab" ∈ L(r1)
 example : InLang ['a', 'b'] r1 := by
   apply InLang.seq (w₁ := ['a']) (w₂ := ['b'])
   · apply InLang.choiceLeft
@@ -127,7 +108,7 @@ example : InLang ['a', 'b'] r1 := by
   · apply InLang.choiceLeft
     exact InLang.char 'b'
 
--- "xx" ∈ L(x*): zwei Wiederholungen, dann Schluss
+-- "xx" ∈ L(x*)
 example : InLang ['x', 'x'] (star x) := by
   apply InLang.starCons (w₁ := ['x']) (w₂ := ['x'])
   · exact InLang.char 'x'
@@ -135,13 +116,11 @@ example : InLang ['x', 'x'] (star x) := by
     · exact InLang.char 'x'
     · exact InLang.starNil
 
--- Kein Wort liegt in L(φ): es gibt keine Regel, die auf φ endet
+-- L(φ) ist leer
 example (w : List Char) : ¬ InLang w phi := by
   intro h
   cases h
 
--- Beide Bäume für "ab" aus dem Abschnitt oben sind gültig für r1,
--- direkt als Term aufgeschrieben: die Konstruktoren bilden den Baum nach
 example : Valid v1 r1 :=
   Valid.seq (Valid.right (Valid.seq (Valid.char 'a') (Valid.char 'b'))) (Valid.right Valid.eps)
 
@@ -152,7 +131,6 @@ example : Valid v2 r2 :=
   Valid.starCons (Valid.right (Valid.right (Valid.seq (Valid.char 'a') (Valid.char 'b'))))
     Valid.starNil
 
--- Ein Baum für den falschen Buchstaben ist nicht gültig
 example : ¬ Valid (letter 'a') b := by
   intro h
   cases h
