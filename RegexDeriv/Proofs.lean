@@ -76,4 +76,105 @@ theorem mkEps_inLang (r : Regex) (v : Val) (h : mkEps r = some v) :
   have ⟨hv, hf⟩ := mkEps_sound r v h
   exact ⟨valid_inLang hv, hf⟩
 
+/-! ## Das `inj`-Lemma -/
+
+theorem valid_star_list {v : Val} {r : Regex} (h : Valid v (.star r)) : ∃ vs, v = list vs := by
+  cases h with
+  | starNil => exact ⟨[], rfl⟩
+  | starCons _ _ => exact ⟨_, rfl⟩
+
+/-- `inj`-Lemma: Aus einem gültigen Baum für `deriv c r` macht `inj` einen gültigen
+Baum für `r`, der `c` vorne dazubekommt.
+
+Induktion über `r`. In jedem Fall wird `deriv c r` ausgerechnet und mit `cases hv`
+bestimmt, welche Form `v` haben kann. -/
+theorem inj_sound (r : Regex) (c : Char) (v v' : Val)
+    (hv : Valid v (deriv c r)) (h : inj r c v = some v') :
+    Valid v' r ∧ flatten v' = c :: flatten v := by
+  induction r generalizing v v' with
+  | phi =>
+    simp only [deriv] at hv
+    cases hv
+  | eps =>
+    simp only [deriv] at hv
+    cases hv
+  | char d =>
+    simp only [deriv] at hv
+    by_cases hcd : c = d
+    · subst hcd
+      simp at hv
+      cases hv
+      simp [inj] at h
+      subst h
+      exact ⟨Valid.char c, rfl⟩
+    · simp [hcd] at hv
+      cases hv
+  | choice r s ihr ihs =>
+    simp only [deriv] at hv
+    cases hv with
+    | @left v1 _ _ hv1 =>
+      simp [inj] at h
+      obtain ⟨v1', h1, rfl⟩ := h
+      have ⟨hv1', hf1⟩ := ihr v1 v1' hv1 h1
+      exact ⟨Valid.left hv1', hf1⟩
+    | @right v2 _ _ hv2 =>
+      simp [inj] at h
+      obtain ⟨v2', h2, rfl⟩ := h
+      have ⟨hv2', hf2⟩ := ihs v2 v2' hv2 h2
+      exact ⟨Valid.right hv2', hf2⟩
+  | seq r s ihr ihs =>
+    simp only [deriv] at hv
+    by_cases hr : nullable r = true
+    · simp [hr] at hv
+      cases hv with
+      | @left v0 _ _ hv0 =>
+        -- v = left (pair v1 v2): der Buchstabe gehört zu r
+        cases hv0 with
+        | @seq v1 v2 _ _ hv1 hv2 =>
+          simp [inj] at h
+          obtain ⟨v1', h1, rfl⟩ := h
+          have ⟨hv1', hf1⟩ := ihr v1 v1' hv1 h1
+          refine ⟨Valid.seq hv1' hv2, ?_⟩
+          show flatten v1' ++ flatten v2 = c :: (flatten v1 ++ flatten v2)
+          rw [hf1, List.cons_append]
+      | @right v2 _ _ hv2 =>
+        -- v = right v2: r bekommt das leere Wort (mkEps-Lemma), der Buchstabe gehört zu s
+        simp only [inj] at h
+        cases hm : mkEps r with
+        | none =>
+          simp [hm] at h
+        | some v1 =>
+          cases hi : inj s c v2 with
+          | none =>
+            simp [hm, hi] at h
+          | some v2' =>
+            simp [hm, hi] at h
+            subst h
+            have ⟨hv1, hf1⟩ := mkEps_sound r v1 hm
+            have ⟨hv2', hf2⟩ := ihs v2 v2' hv2 hi
+            refine ⟨Valid.seq hv1 hv2', ?_⟩
+            show flatten v1 ++ flatten v2' = c :: flatten v2
+            rw [hf1, hf2, List.nil_append]
+    · -- r nicht nullable: v = pair v1 v2, der Buchstabe gehört zu r
+      simp [hr] at hv
+      cases hv with
+      | @seq v1 v2 _ _ hv1 hv2 =>
+        simp [inj] at h
+        obtain ⟨v1', h1, rfl⟩ := h
+        have ⟨hv1', hf1⟩ := ihr v1 v1' hv1 h1
+        refine ⟨Valid.seq hv1' hv2, ?_⟩
+        show flatten v1' ++ flatten v2 = c :: (flatten v1 ++ flatten v2)
+        rw [hf1, List.cons_append]
+  | star r ih =>
+    simp only [deriv] at hv
+    cases hv with
+    | @seq v1 v2 _ _ hv1 hv2 =>
+      obtain ⟨vs, rfl⟩ := valid_star_list hv2
+      simp [inj] at h
+      obtain ⟨v1', h1, rfl⟩ := h
+      have ⟨hv1', hf1⟩ := ih v1 v1' hv1 h1
+      refine ⟨Valid.starCons hv1' hv2, ?_⟩
+      show flatten v1' ++ flatten (list vs) = c :: (flatten v1 ++ flatten (list vs))
+      rw [hf1, List.cons_append]
+
 end Regex
