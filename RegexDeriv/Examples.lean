@@ -1,5 +1,4 @@
-import RegexDeriv.Parse
-import RegexDeriv.Language
+import RegexDeriv.Proofs
 
 /-!
 # Beispiele
@@ -134,5 +133,16 @@ example : Valid v2 r2 :=
 example : ¬ Valid (letter 'a') b := by
   intro h
   cases h
+
+/-! ## Anwendung des Hauptsatzes -/
+
+example : InLang ['a', 'b'] r1 :=
+  parse_word_inLang r1 ['a', 'b'] v1 (by rfl)
+
+example : InLang ['a', 'b', 'b', 'a'] r2 :=
+  parse_word_inLang r2 ['a', 'b', 'b', 'a'] _ (by rfl)
+
+example : Valid v1 r1 :=
+  (parse_sound r1 ['a', 'b'] v1 (by rfl)).1
 
 end Examples

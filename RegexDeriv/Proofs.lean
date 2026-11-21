@@ -177,4 +177,46 @@ theorem inj_sound (r : Regex) (c : Char) (v v' : Val)
       show flatten v1' ++ flatten (list vs) = c :: (flatten v1 ++ flatten (list vs))
       rw [hf1, List.cons_append]
 
+/-! ## Der Hauptsatz -/
+
+/-- Induktion über das Wort: Basisfall mit dem `mkEps`-Lemma, Schritt mit dem `inj`-Lemma. -/
+theorem parse_valid (r : Regex) (w : List Char) (v : Val) (h : parse r w = some v) :
+    Valid v r ∧ flatten v = w := by
+  induction w generalizing r v with
+  | nil =>
+    simp only [parse] at h
+    by_cases hn : nullable r = true
+    · simp [hn] at h
+      exact mkEps_sound r v h
+    · simp [hn] at h
+  | cons c cs ih =>
+    simp only [parse] at h
+    cases hp : parse (deriv c r) cs with
+    | none =>
+      simp [hp] at h
+    | some u =>
+      simp [hp] at h
+      have ⟨hu, hfu⟩ := ih (deriv c r) u hp
+      have ⟨hv, hfv⟩ := inj_sound r c u v hu h
+      refine ⟨hv, ?_⟩
+      rw [hfv, hfu]
+
+/-- Hauptsatz: Kernziel `|v| ∈ L(r)` und die Zusatzziele `⊢ v : r` und `|v| = w`. -/
+theorem parse_sound (r : Regex) (w : List Char) (v : Val) (h : parse r w = some v) :
+    Valid v r ∧ flatten v = w ∧ InLang (flatten v) r := by
+  have ⟨hv, hf⟩ := parse_valid r w v h
+  exact ⟨hv, hf, valid_inLang hv⟩
+
+/-- Das Kernziel in der Formulierung der Aufgabe. -/
+theorem parse_inLang (r : Regex) (w : List Char) (v : Val) :
+    parse r w = some v → InLang (flatten v) r := by
+  intro h
+  exact (parse_sound r w v h).2.2
+
+theorem parse_word_inLang (r : Regex) (w : List Char) (v : Val) (h : parse r w = some v) :
+    InLang w r := by
+  have ⟨_, hf, hl⟩ := parse_sound r w v h
+  rw [hf] at hl
+  exact hl
+
 end Regex
