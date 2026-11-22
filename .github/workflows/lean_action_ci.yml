@@ -12,3 +12,5 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: leanprover/lean-action@v1
+      - name: Check for sorry, axiom and native_decide
+        run: "! grep -rnw --include='*.lean' -e sorry -e axiom -e native_decide RegexDeriv RegexDeriv.lean"
