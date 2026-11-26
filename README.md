@@ -86,3 +86,55 @@ Unterschiede:
 | `inj r (r\l) l u` | `inj r c v` | der Fall von `deriv` ist an der Form von `v` ablesbar; so rekursiert `inj` strukturell über `r` |
 | `let Pair (u', u'') = u` | Muster `left (pair v1 v2)` | kein Laufzeitfehler bei falscher Form, stattdessen `none` |
 | lokale Funktion `go` in `matchDeriv` | direkte Rekursion über das Wort | einfacher für Beweise |
+
+
+
+## `inj`: Haskell vs. Lean
+
+### Unterschied
+
+```haskell
+-- Haskell
+inj :: R -> R -> Char -> U -> U          -- r, r\l, Buchstabe, Baum
+```
+```lean
+-- Lean
+def inj : Regex → Char → Val → Option Val  -- r, Buchstabe, Baum
+```
+
+- **Rückgabe:** Haskell `U`, Lean `Option Val` (`some v` oder `none`)
+- **Fehlerfälle:** Haskell bricht mit `error` ab, Lean liefert `none`
+- **Argument `r\l`:** Haskell bekommt es übergeben, Lean nicht
+
+### Wieso ist die Anpassung in Lean notwendig?
+
+**`Option` statt `error`: notwendig**
+- Lean akzeptiert nur Funktionen, die für jede Eingabe ein Ergebnis liefern
+- Grund: Funktionen werden auch in Beweisen benutzt, ein Absturz würde die Logik kaputt machen
+- Haskell-`inj` kann zur Laufzeit abstürzen:
+  - letzte Zeile ruft `error` auf
+  - `let Pair (u', u'') = u` scheitert, wenn `u` kein `Pair` ist
+- In Lean werden diese Fälle zu `none`
+
+**Kein `r\l`: nicht notwendig, aber einfacher**
+- `r\l` ist immer `deriv l r`, also überflüssig
+- Welcher Fall von `deriv` vorlag, sieht man an der Form des Baums `v`
+- Beispiel `seq r s`:
+  - `r` nicht nullable → Ableitung ist `seq` → `v` ist `pair`
+  - `r` nullable → Ableitung ist `choice` → `v` ist `left` oder `right`
+- Dadurch: `inj` läuft nur rekursiv über `r` → Beweis ist eine einfache Induktion über `r`
+- Mit `r\l` wäre es auch gegangen, aber der Beweis wäre aufwendiger
+
+### Könnte man das gleiche auch in Haskell machen?
+
+- **Ja, beides**
+- Haskell hat `Maybe` (= Leans `Option`), statt `error` also `Nothing`
+- Man kann genauso auf die Form des Baums matchen statt auf `r\l`
+- Beispiel, gleicher Fall in beiden Sprachen:
+  ```haskell
+  inj (Seq r1 _) l (Pair (u1, u2)) = (\u1' -> Pair (u1', u2)) <$> inj r1 l u1
+  ```
+  ```lean
+  | seq r _, c, pair v1 v2 => (inj r c v1).map (fun v1' => pair v1' v2)
+  ```
+- **Einziger Unterschied:** Haskell *erlaubt* Abstürze (höchstens eine Warnung), Lean *verbietet* sie
